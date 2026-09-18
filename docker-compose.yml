@@ -1,0 +1,54 @@
+services:
+  keycloak_db:
+    image: mariadb:10.9.3
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Defina MYSQL_ROOT_PASSWORD no arquivo .env}
+      MYSQL_DATABASE: keycloak
+      MYSQL_USER: keycloak
+      MYSQL_PASSWORD: ${KC_DB_PASSWORD:?Defina KC_DB_PASSWORD no arquivo .env}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "--silent"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - sys_rasp_keycloak_db:/var/lib/mysql
+    networks:
+      - sys_rasp
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:19.0.2
+    command: ["start-dev"]
+    restart: unless-stopped
+    environment:
+      KC_DB: mariadb
+      KC_DB_URL_HOST: keycloak_db
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?Defina KC_DB_PASSWORD no arquivo .env}
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      # Mantido por compatibilidade com o host atual (JVM 17/cgroup v2).
+      JAVA_OPTS_APPEND: -XX:-UseContainerSupport
+      KC_PROXY: edge
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Defina KEYCLOAK_ADMIN_PASSWORD no arquivo .env}
+    volumes:
+      - ./themes:/opt/keycloak/themes:ro
+    ports:
+      - "${KEYCLOAK_PORT:-8077}:8080"
+    networks:
+      - sys_rasp
+    depends_on:
+      keycloak_db:
+        condition: service_healthy
+
+networks:
+  sys_rasp:
+    external: true
+
+volumes:
+  # Volume externo existente: preserva os dados do Keycloak atual na migração.
+  sys_rasp_keycloak_db:
+    external: true
