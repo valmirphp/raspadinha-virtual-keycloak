@@ -1,63 +1,68 @@
-# Keycloak — desenvolvimento e customização
+# Keycloak Raspadinha — operação e customização
 
-Este repositório é responsável **somente pelo Keycloak e seus temas**. A API `raspadinha-virtual-api-graphql` não deve ser alterada para mudanças daqui.
+Este repositório opera **somente** o Keycloak, seu banco MariaDB, o realm e os temas. A API `raspadinha-virtual-api-graphql` não deve ser editada como parte deste projeto.
 
-## Pré-requisitos
+## Arquitetura de deploy
 
-- Docker Engine com Docker Compose v2
-- A rede Docker externa `sys_rasp`
-- O volume Docker externo `sys_rasp_keycloak_db` (para usar os dados já existentes)
+- URL pública: `https://auth-raspadinha.dploy.space`
+- Proxy/TLS: Traefik, rede Docker externa `edge`
+- Keycloak: `quay.io/keycloak/keycloak:19.0.2`
+- Banco: volume Docker próprio `raspadinha-keycloak_keycloak-db`
+- Não há `ports:` publicados: o Traefik é a única entrada pública.
 
-Confira antes de subir:
+## Segredos
 
-```bash
-docker network inspect sys_rasp
-docker volume inspect sys_rasp_keycloak_db
+Nunca versione `.env`, senhas de banco, senha do admin ou secrets de client. Em servidor, guarde-os no arquivo seguro de ambiente da stack (modo `600`) e rode o Compose com `--env-file`.
+
+Variáveis obrigatórias:
+
+```dotenv
+MYSQL_ROOT_PASSWORD=<senha-aleatoria>
+KC_DB_PASSWORD=<senha-aleatoria>
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=<senha-aleatoria>
 ```
 
-## Rodar localmente
+## Realm importado
 
-1. Crie seu arquivo de variáveis e defina senhas reais:
+- `keycloak/import/realm-export.json` é o export recebido e permanece versionado por solicitação explícita.
+- Esse export contém duas policies JavaScript legadas. Keycloak 19 bloqueia esse formato em imports; não habilite `KC_FEATURES=scripts` em deploy apenas para contornar o bloqueio.
+- `scripts/prepare-realm-import.py` gera `keycloak/import/realm-import.json`, que substitui somente essas policies incondicionais por uma policy de role `uma_authorization`, já default no realm. Isso preserva a intenção sem reabrir execução de JavaScript no servidor.
 
-```bash
-cp .env.example .env
-chmod 600 .env
-```
-
-2. Valide a composição sem iniciar containers:
+Sempre regenere e revise antes de alterar o export:
 
 ```bash
-docker compose config
+python3 scripts/prepare-realm-import.py
+python3 -m json.tool keycloak/import/realm-import.json >/dev/null
 ```
 
-3. **Migração controlada:** o `docker-compose.yaml` da API continua intacto por enquanto, mas ele ainda declara os mesmos serviços/volume de Keycloak. Não deixe os dois projetos subirem Keycloak ao mesmo tempo, ou haverá conflito de porta e de acesso ao banco. Pare somente os serviços Keycloak do projeto antigo antes de iniciar este:
+O export mascara secrets de clients. Após uma importação em banco novo, restaure ou rotacione os secrets de todos os clients confidenciais antes de encaminhar tráfego dependente deles.
+
+## Subir no servidor
 
 ```bash
-cd ../raspadinha-virtual-api-graphql
-docker compose stop keycloak keycloak_db
-cd ../raspadinha-virtual-keycloak
-docker compose up -d
+# Validar o render antes de tocar no Docker
+docker compose --env-file /caminho/seguro/.env config --quiet
+
+# Subir (Keycloak importa o realm apenas se ele ainda não existir)
+sudo docker compose --env-file /caminho/seguro/.env up -d
+
+# Verificar estado e logs
+sudo docker compose ps
+sudo docker compose logs --tail=150 keycloak
 ```
 
-4. Acompanhe o boot e acesse `http://localhost:8077`:
+O deploy só está pronto após validar pela rota pública:
 
 ```bash
-docker compose logs -f keycloak
-docker compose ps
-curl -fsS http://localhost:8077/health/ready
+curl -fsS https://auth-raspadinha.dploy.space/realms/rasp-dev/.well-known/openid-configuration
 ```
 
-Para parar sem apagar os dados:
-
-```bash
-docker compose down
-```
-
-Nunca rode `docker compose down -v` neste projeto: o volume é externo e contém os dados do Keycloak.
+Confirme que `issuer`, `authorization_endpoint` e `token_endpoint` começam com `https://auth-raspadinha.dploy.space/`.
 
 ## Tema `raspadinha`
 
-O tema inicial herda do tema base `keycloak` e aplica fundo verde na tela de login:
+O tema herda do tema base `keycloak` e inicia com fundo verde:
 
 ```text
 themes/raspadinha/login/
@@ -65,27 +70,17 @@ themes/raspadinha/login/
 └── resources/css/styles.css
 ```
 
-No Admin Console:
+No Admin Console do realm: **Realm settings → Themes → Login theme → `raspadinha`**.
 
-1. Abra o realm desejado.
-2. Vá em **Realm settings → Themes**.
-3. Em **Login theme**, escolha `raspadinha` e salve.
-4. Abra uma aba anônima para validar a tela de login.
-
-### Customizar
-
-- CSS: edite `themes/raspadinha/login/resources/css/styles.css`.
-- Templates: só crie `login/*.ftl` quando precisar mudar a estrutura HTML. Eles sobrescrevem os arquivos do tema pai; não copie template à toa — esse é o jeito mais rápido de ganhar uma manutenção chata em atualização do Keycloak.
-- Recursos estáticos (logos/imagens): use `themes/raspadinha/login/resources/` e referencie-os no CSS ou template.
-
-Após alterar CSS/recursos em desenvolvimento, reinicie o serviço para garantir que o Keycloak releia o tema:
+- Para cores/layout leve: altere `resources/css/styles.css`.
+- Para logo/imagens: adicione arquivos em `resources/`.
+- Crie templates `*.ftl` apenas quando precisar mudar HTML. Copiar templates do pai só para mexer num detalhe é dívida técnica com gravidade marciana.
+- Reinicie o Keycloak para recarregar mudanças de tema:
 
 ```bash
-docker compose restart keycloak
+sudo docker compose restart keycloak
 ```
 
-## Regras de segurança
+## Remoção do legado
 
-- Não versione `.env`, exports de realm, client secrets ou senhas.
-- Não habilite `KC_FEATURES=scripts` só para importar políticas JavaScript legadas; migre-as antes.
-- Para produção, não use `start-dev`; defina hostname, proxy/TLS e execute `start` com configuração revisada.
+A stack antiga usa os containers `sys_rasp_keycloak` e `sys_rasp_keycloak_db` e o volume `sys_rasp_keycloak_db`. Só remova o volume antigo depois que o novo Keycloak estiver saudável, o realm importado e os client secrets restaurados. A API não é modificada neste repositório.
