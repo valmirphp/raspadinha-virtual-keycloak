@@ -62,20 +62,40 @@ Confirme que `issuer`, `authorization_endpoint` e `token_endpoint` começam com 
 
 ## Tema `raspadinha`
 
-O tema herda do tema base `keycloak` e inicia com fundo verde:
+Tema de login com o visual do admin (Raspala Admin, padrão "build-manager": dark por padrão, claro via
+`prefers-color-scheme`, Inter/JetBrains Mono, cards flat). Herda do `base` (só a lógica FreeMarker) e traz CSS/JS
+próprios — **não** carrega PatternFly.
 
 ```text
 themes/raspadinha/login/
-├── theme.properties
-└── resources/css/styles.css
+├── theme.properties            # parent=base; mapeia todas as classes kc* para classes rs-*
+├── template.ftl                # layout (marca, card, seletor de idioma, alertas, footer); seção extra "subtitle"
+├── login.ftl                   # formulário de login (mostrar/ocultar senha, lembrar-me, esqueci a senha, social)
+├── messages/messages_{en,es,pt_BR}.properties   # chaves raspala* (acentos em \uXXXX: o Keycloak lê ISO-8859-1)
+└── resources/{css/login.css, js/password-toggle.js, img/favicon.ico}
 ```
 
-No Admin Console do realm: **Realm settings → Themes → Login theme → `raspadinha`**.
+Regras ao evoluir:
 
-- Para cores/layout leve: altere `resources/css/styles.css`.
-- Para logo/imagens: adicione arquivos em `resources/`.
-- Crie templates `*.ftl` apenas quando precisar mudar HTML. Copiar templates do pai só para mexer num detalhe é dívida técnica com gravidade marciana.
-- Reinicie o Keycloak para recarregar mudanças de tema:
+- Cores/tipografia: só em `resources/css/login.css` (tokens no `:root` e no bloco `prefers-color-scheme: light`).
+- Outras páginas do fluxo (reset de senha, erro, OTP, update password) usam o `template.ftl` e as classes `rs-*`
+  via `theme.properties`; para mudar o HTML de uma delas, copie o `.ftl` de `reference/keycloak-19.0.2/base/login/`.
+- Strings novas: adicione a chave nos três `messages_*.properties`, sempre com escapes `\uXXXX` para não-ASCII.
+- `<!-- -->` não é comentário para o FreeMarker: nunca deixe `$` + `{...}` dentro de comentários HTML.
+
+Teste local (renderiza o tema num Keycloak 19 descartável, sem tocar no servidor):
+
+```bash
+docker run --rm -p 8081:8080 -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
+  -v "$PWD/themes:/opt/keycloak/themes:ro" \
+  quay.io/keycloak/keycloak:19.0.2 start-dev \
+  --spi-theme-static-max-age=-1 --spi-theme-cache-themes=false --spi-theme-cache-templates=false
+# Realm settings → Themes → Login theme → raspadinha, depois abra
+# http://localhost:8081/realms/<realm>/protocol/openid-connect/auth?client_id=<client>&response_type=code&redirect_uri=<uri>
+```
+
+No Admin Console do realm: **Realm settings → Themes → Login theme → `raspadinha`**. Reinicie o Keycloak para recarregar
+mudanças de tema em produção:
 
 ```bash
 sudo docker compose restart keycloak
