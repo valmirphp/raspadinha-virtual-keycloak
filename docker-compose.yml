@@ -39,12 +39,16 @@ services:
       KC_HTTP_ENABLED: "true"
       KC_PROXY: edge
       KC_HOSTNAME: auth-raspadinha.dploy.space
+      # Preserva o provider imutável que já atende as policies do realm legado.
+      # Não aceita scripts inline do import.
+      KC_FEATURES: scripts
       # Compatibilidade necessária neste host para Keycloak 19/JVM 17/cgroup v2.
       JAVA_OPTS_APPEND: -XX:-UseContainerSupport
       KEYCLOAK_ADMIN: ${RASP_KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${RASP_KEYCLOAK_ADMIN_PASSWORD:?Defina RASP_KEYCLOAK_ADMIN_PASSWORD fora do repositório}
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import:ro
+      - ./keycloak/providers:/opt/keycloak/providers:ro
       - ./themes:/opt/keycloak/themes:ro
     networks:
       - keycloak-internal
