@@ -1,4 +1,4 @@
-/* Tema de login Raspala — mesmos tokens do admin (src/app/globals.css, padrão build-manager).
+/* Tema de login do admin — mesmos tokens do admin (src/app/globals.css, padrão build-manager).
    Dark por padrão; claro via prefers-color-scheme. Sem fontes externas. */
 :root {
   color-scheme: dark;
@@ -246,9 +246,6 @@ a { color: inherit; }
 }
 .rs-locale-link { display: block; padding: 6px 8px; border-radius: 4px; font-size: 13px; color: var(--foreground); text-decoration: none; }
 .rs-locale-link:hover { background: var(--muted); }
-
-/* Rodapé */
-.rs-footer { margin: 18px 0 0; text-align: center; font-size: 11px; color: var(--muted-foreground); }
 
 /* Seleção de autenticador / OTP / recovery — estilo básico coerente */
 .rs-auth-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
