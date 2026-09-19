@@ -40,18 +40,10 @@
 <body class="${properties.kcBodyClass!} ${bodyClass}">
 <main class="${properties.kcLoginClass!}">
 
-    <#-- Marca: ícone inline + nome do realm (displayNameHtml) ou "Raspala" -->
+    <#-- Marca: isologo inline + nome do realm (displayNameHtml) -->
     <div id="kc-header" class="${properties.kcHeaderClass!}">
-        <svg class="rs-brand-mark" width="22" height="22" viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
-            <defs>
-                <linearGradient id="rs-brand-gradient" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stop-color="#4f46e5"/>
-                    <stop offset="1" stop-color="#282373"/>
-                </linearGradient>
-            </defs>
-            <rect x="1" y="1" width="22" height="22" rx="6" fill="url(#rs-brand-gradient)"/>
-            <path d="M7.5 15.5 L12 6.5 L16.5 15.5" fill="none" stroke="#fafafa" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9.4 12.9 H14.6" fill="none" stroke="#fafafa" stroke-width="1.9" stroke-linecap="round"/>
+        <svg class="rs-brand-mark" width="20" height="22" viewBox="0 0 359.34 400" role="img" aria-hidden="true" focusable="false">
+            <path fill="#a166ff" d="M0 369.28V400h310.74a48.5 48.5 0 0 0 48.51-48.5V200.04H169.23A169.25 169.25 0 0 0 0 369.27ZM.06 48.5v151.46h190.02A169.26 169.26 0 0 0 359.34 30.69V0H48.57A48.52 48.52 0 0 0 .06 48.5Z"/>
         </svg>
         <div id="kc-header-wrapper" class="${properties.kcHeaderWrapperClass!}">${kcSanitize(msg("loginTitleHtml",(realm.displayNameHtml!'')))?no_esc}</div>
     </div>
@@ -145,7 +137,6 @@
         </div>
     </div>
 
-    <p class="rs-footer">${msg("raspalaFooter")}</p>
 </main>
 </body>
 </html>
