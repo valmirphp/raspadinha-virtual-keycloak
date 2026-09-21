@@ -42,7 +42,7 @@
 
     <#-- Marca: só o isologo, maior; o nome do realm fica no aria-label, não na tela -->
     <div id="kc-header" class="${properties.kcHeaderClass!}">
-        <svg class="rs-brand-mark" width="40" height="44" viewBox="0 0 359.34 400" role="img" aria-label="${(realm.displayName!'Admin')?html}" focusable="false">
+        <svg class="rs-brand-mark" width="40" height="44" viewBox="0 0 359.34 400" role="img" aria-label="${realm.displayName!'Admin'}" focusable="false">
             <path fill="#a166ff" d="M0 369.28V400h310.74a48.5 48.5 0 0 0 48.51-48.5V200.04H169.23A169.25 169.25 0 0 0 0 369.27ZM.06 48.5v151.46h190.02A169.26 169.26 0 0 0 359.34 30.69V0H48.57A48.52 48.52 0 0 0 .06 48.5Z"/>
         </svg>
     </div>
